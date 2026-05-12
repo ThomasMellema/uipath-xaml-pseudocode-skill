@@ -1,0 +1,90 @@
+<Activity x:Class="Main"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StateMachine DisplayName="REFramework Main" InitialState="Init">
+    <StateMachine.States>
+      <State DisplayName="Init">
+        <State.Entry>
+          <Sequence DisplayName="Init entry">
+            <InvokeWorkflowFile DisplayName="Init applications"
+                                WorkflowFileName="InitAllApplications.xaml">
+              <InvokeWorkflowFile.Arguments>
+                <InOutArgument x:Key="io_Config">[Config]</InOutArgument>
+                <OutArgument x:Key="out_SystemException">[SystemException]</OutArgument>
+              </InvokeWorkflowFile.Arguments>
+            </InvokeWorkflowFile>
+          </Sequence>
+        </State.Entry>
+        <State.Transitions>
+          <Transition To="Get Transaction Data" Condition="[SystemException Is Nothing]">
+            <Transition.Action>
+              <Assign To="[io_RetryNumber]" Value="[0]" />
+            </Transition.Action>
+          </Transition>
+          <Transition To="End Process" Condition="[SystemException IsNot Nothing]" />
+        </State.Transitions>
+      </State>
+      <State DisplayName="Get Transaction Data">
+        <State.Entry>
+          <InvokeWorkflowFile DisplayName="Get transaction data"
+                              WorkflowFileName="GetTransactionData.xaml">
+            <InvokeWorkflowFile.Arguments>
+              <InArgument x:Key="in_Config">[Config]</InArgument>
+              <InOutArgument x:Key="io_TransactionNumber">[TransactionNumber]</InOutArgument>
+              <OutArgument x:Key="out_TransactionItem">[TransactionItem]</OutArgument>
+              <OutArgument x:Key="out_TransactionID">[TransactionID]</OutArgument>
+            </InvokeWorkflowFile.Arguments>
+          </InvokeWorkflowFile>
+        </State.Entry>
+        <State.Transitions>
+          <Transition To="Process Transaction" Condition="[TransactionItem IsNot Nothing]" />
+          <Transition To="End Process" Condition="[TransactionItem Is Nothing]" />
+        </State.Transitions>
+      </State>
+      <State DisplayName="Process Transaction">
+        <State.Entry>
+          <InvokeWorkflowFile DisplayName="Process transaction"
+                              WorkflowFileName="Process.xaml">
+            <InvokeWorkflowFile.Arguments>
+              <InArgument x:Key="in_Config">[Config]</InArgument>
+              <InArgument x:Key="in_TransactionItem">[TransactionItem]</InArgument>
+              <OutArgument x:Key="out_BusinessException">[BusinessException]</OutArgument>
+              <OutArgument x:Key="out_SystemException">[SystemException]</OutArgument>
+            </InvokeWorkflowFile.Arguments>
+          </InvokeWorkflowFile>
+        </State.Entry>
+        <State.Transitions>
+          <Transition To="Set Transaction Status" Condition="[True]" />
+        </State.Transitions>
+      </State>
+      <State DisplayName="Set Transaction Status">
+        <State.Entry>
+          <InvokeWorkflowFile DisplayName="Set transaction status"
+                              WorkflowFileName="SetTransactionStatus.xaml">
+            <InvokeWorkflowFile.Arguments>
+              <InArgument x:Key="in_Config">[Config]</InArgument>
+              <InArgument x:Key="in_TransactionItem">[TransactionItem]</InArgument>
+              <InArgument x:Key="in_BusinessException">[BusinessException]</InArgument>
+              <InArgument x:Key="in_SystemException">[SystemException]</InArgument>
+              <InOutArgument x:Key="io_RetryNumber">[RetryNumber]</InOutArgument>
+            </InvokeWorkflowFile.Arguments>
+          </InvokeWorkflowFile>
+        </State.Entry>
+        <State.Transitions>
+          <Transition To="Get Transaction Data" Condition="[RetryNumber &lt; CInt(Config(&quot;MaxRetryNumber&quot;))]" />
+          <Transition To="End Process" Condition="[ShouldStop]" />
+        </State.Transitions>
+      </State>
+      <State DisplayName="End Process">
+        <State.Entry>
+          <Sequence DisplayName="Cleanup">
+            <InvokeWorkflowFile DisplayName="Close applications"
+                                WorkflowFileName="CloseAllApplications.xaml" />
+            <InvokeWorkflowFile DisplayName="Kill processes"
+                                WorkflowFileName="KillAllProcesses.xaml" />
+          </Sequence>
+        </State.Entry>
+      </State>
+    </StateMachine.States>
+  </StateMachine>
+</Activity>

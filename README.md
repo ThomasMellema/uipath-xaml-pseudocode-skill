@@ -7,13 +7,19 @@ It does not modify the original UiPath project.
 ## Usage
 
 ```bash
-python tools/uipath_xaml_to_pseudocode.py --file Main.xaml --out .agent-context/pseudocode/Main.uipath.py
+python scripts/uipath_xaml_to_pseudocode.py --file Main.xaml --out .agent-context/pseudocode/Main.uipath.py
 ```
 
 Or write to stdout:
 
 ```bash
-python tools/uipath_xaml_to_pseudocode.py --file Main.xaml
+python scripts/uipath_xaml_to_pseudocode.py --file Main.xaml
+```
+
+Convert all workflows in a UiPath project:
+
+```bash
+python scripts/uipath_xaml_to_pseudocode.py --dir . --out .agent-context/pseudocode
 ```
 
 ## Purpose
@@ -21,3 +27,11 @@ python tools/uipath_xaml_to_pseudocode.py --file Main.xaml
 Raw UiPath XAML is noisy. This skill preserves useful workflow logic while dropping designer/viewstate/XML metadata.
 
 Generated files are not executable Python. They are a compact semantic view of the workflow for human and agent analysis.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests
+```
+
+The tests include small fixtures plus snapshot coverage for broader UiPath activity families and REFramework-style workflows.

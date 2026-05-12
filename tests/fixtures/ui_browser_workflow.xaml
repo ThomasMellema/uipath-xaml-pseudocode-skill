@@ -1,0 +1,39 @@
+<Activity x:Class="UiBrowserWorkflow"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <Sequence DisplayName="UI browser flow">
+    <ui:UseApplicationBrowser DisplayName="Use customer portal"
+                              Url="[Config(&quot;PortalUrl&quot;).ToString]"
+                              Selector="&lt;html title='Customer Portal' /&gt;">
+      <ui:UseApplicationBrowser.Body>
+        <Sequence DisplayName="Portal actions">
+          <ui:Click DisplayName="Click login"
+                    Selector="&lt;webctrl aaname='Sign in' id='login' /&gt;"
+                    TimeoutMS="30000" />
+          <ui:TypeInto DisplayName="Password field"
+                       Text="[&quot;plain-password-123&quot;]"
+                       Selector="&lt;webctrl aaname='Password' id='password' /&gt;" />
+          <ui:GetText DisplayName="Read confirmation"
+                      Output="[confirmationText]"
+                      Selector="&lt;webctrl title='Welcome Customer A' id='welcome' /&gt;" />
+          <ui:ElementExists DisplayName="Find dashboard"
+                            Output="[dashboardExists]"
+                            Selector="&lt;webctrl title='Dashboard' id='dashboard' /&gt;" />
+          <ui:CheckAppState DisplayName="Check dashboard">
+            <ui:CheckAppState.Target>
+              <ui:ElementExists DisplayName="Dashboard target"
+                                Selector="&lt;webctrl title='Dashboard' id='dashboard' /&gt;" />
+            </ui:CheckAppState.Target>
+            <ui:CheckAppState.Then>
+              <LogMessage Level="Info" Message="[&quot;Dashboard loaded&quot;]" />
+            </ui:CheckAppState.Then>
+            <ui:CheckAppState.Else>
+              <Throw Exception="[New System.Exception(&quot;Dashboard missing&quot;)]" />
+            </ui:CheckAppState.Else>
+          </ui:CheckAppState>
+        </Sequence>
+      </ui:UseApplicationBrowser.Body>
+    </ui:UseApplicationBrowser>
+  </Sequence>
+</Activity>

@@ -1,84 +1,59 @@
 ---
 name: uipath-xaml-pseudocode
-description: "Use this when you need to inspect a UiPath .xaml workflow. Convert raw XAML into compact Python-like pseudocode first, preserving workflow structure, Assign values, conditions, invokes, variables, arguments, Try/Catch, queues, assets, config usage, and important UI actions while dropping designer/viewstate/XML noise."
-allowed-tools: Bash, Read, Glob
-user-invocable: true
+description: Convert UiPath .xaml workflows into compact Python-like pseudocode before analysis. Use when Codex needs to inspect, summarize, debug, review, or compare UiPath workflows or projects, including REFramework projects, while preserving workflow structure, StateMachine transitions, variables, arguments, Assign, InvokeWorkflowFile, If/Switch, loops, Try/Catch/Rethrow, RetryScope, queue/asset/credential/config references, UI/browser, Excel/DataTable, mail, API, file activity signals, selectors, and logs without loading raw XAML noise.
 ---
 
 # UiPath XAML Pseudocode
 
-Use this skill whenever a UiPath `.xaml` file must be read or analyzed.
+Use this skill before reading UiPath `.xaml` files. Raw UiPath XAML contains designer metadata, view state, namespace dumps, and serialization noise that should not be the primary analysis context.
 
-The goal is to avoid using raw XAML as agent context. Raw UiPath XAML contains large amounts of designer/viewstate/XML metadata that wastes tokens and obscures the actual workflow logic.
+## Workflow
 
-## Primary rule
+1. Resolve this skill's script path:
 
-Do not read raw `.xaml` as the primary context.
+   ```bash
+   <skill-dir>/scripts/uipath_xaml_to_pseudocode.py
+   ```
 
-Before analyzing a `.xaml` file, run:
+2. Convert one workflow:
 
-```bash
-python tools/uipath_xaml_to_pseudocode.py --file "<path-to-xaml>" --out ".agent-context/pseudocode/<workflow-name>.uipath.py"
-```
+   ```bash
+   python "<skill-dir>/scripts/uipath_xaml_to_pseudocode.py" --file "<path-to-workflow.xaml>" --out ".agent-context/pseudocode/<workflow-name>.uipath.py"
+   ```
 
-Then read the generated `.uipath.py` file and use that as the primary context.
+3. Or convert a UiPath project directory:
 
-Read raw XAML only when the generated pseudocode explicitly fails to capture a detail needed for debugging.
+   ```bash
+   python "<skill-dir>/scripts/uipath_xaml_to_pseudocode.py" --dir "<path-to-uipath-project>" --out ".agent-context/pseudocode"
+   ```
 
-## Output
+4. Read the generated `.uipath.py` files and use them as the primary context.
 
-Generated pseudocode should be treated as non-executable Python-like workflow source.
+Read raw XAML only for a targeted detail that the pseudocode explicitly omits or marks as unsupported.
 
-Default output location:
+## Output Contract
 
-```text
-.agent-context/pseudocode/*.uipath.py
-```
+Treat generated files as non-executable Python-like workflow source.
 
-## Preserve
+Preserve:
 
-- workflow order
-- indentation/nesting
-- Sequence
-- If / Else
-- Switch / Case where detectable
-- For Each / While / Do While
-- Try / Catch / Finally
-- Retry Scope where detectable
-- InvokeWorkflowFile
-- Assign activities with exact right-hand expressions
-- variables with type/default where detectable
-- arguments with direction/type where detectable
-- LogMessage text
-- Throw / Rethrow
-- queue operations
-- asset operations
-- config key usage
-- Excel, mail, browser, API and database actions
-- selector summaries
+- workflow order and indentation
+- `Sequence`, `StateMachine`, `State`, `Transition`, `If`/`Else`, `Switch`/`case`, loops, `Try`/`Catch`/`Finally`, `Rethrow`, and `RetryScope`
+- `InvokeWorkflowFile` calls and arguments
+- `Assign` targets and right-hand expressions
+- variables and arguments where detectable
+- `LogMessage`, `Throw`, queue, asset, credential, config, Excel/DataTable, mail, browser, API, file, database, and UI activity signals
+- compact selector summaries
 
-## Remove from context
+Drop:
 
-- `sap:VirtualizedContainerService.HintSize`
-- `sap2010:WorkflowViewState.IdRef`
-- `WorkflowViewStateService.ViewState`
-- designer layout metadata
-- XML namespace declarations
-- assembly reference dumps
-- XML serialization IDs
-- layout coordinates
-- empty attributes
-- duplicate metadata
+- view state and designer layout metadata
+- XML namespace and assembly reference dumps
+- serialization IDs, hint sizes, coordinates, and empty metadata
 
-## Expression handling
+## Expression Handling
 
-Do not translate UiPath expressions into Python unless the conversion is trivial and safe.
-
-Preserve UiPath expressions as:
-
-```python
-expr("original UiPath expression")
-```
+Preserve UiPath expressions as `expr("original UiPath expression")`. Do not translate expressions into Python unless it is trivial and safe.
 
 Examples:
 
@@ -90,21 +65,10 @@ retry_count = expr('CInt(Config("MaxRetryNumber"))')
 
 ## Redaction
 
-Never expose actual secret values.
+Do not expose actual secret values. The converter redacts obvious password/token/API-key literals and customer-identifying selector values while keeping config key names such as `Config("QueueName")` visible.
 
-Redact or summarize:
-
-- passwords
-- tokens
-- API keys
-- credential values
-- cookies
-- private certificates
-- personal data
-- customer-identifying selector values when not needed
-
-Keep asset names and config key names, but redact values.
+If a redacted or summarized value blocks debugging, inspect only the smallest necessary raw XAML fragment.
 
 ## Fallback
 
-If the converter reports a parse error or unsupported activity, keep the generated fallback output and mention that raw XAML may need targeted inspection for the unsupported part.
+If parsing fails, keep the fallback output and mention that targeted raw XAML inspection may be needed.

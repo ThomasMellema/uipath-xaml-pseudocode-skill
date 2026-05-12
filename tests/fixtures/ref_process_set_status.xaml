@@ -1,0 +1,89 @@
+<ActivityBuilder xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <x:Members>
+    <x:Property Name="in_Config" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property Name="in_TransactionItem" Type="InArgument(UiPath.Core.QueueItem)" />
+    <x:Property Name="io_RetryNumber" Type="InOutArgument(x:Int32)" />
+    <x:Property Name="out_BusinessException" Type="OutArgument(BusinessRuleException)" />
+    <x:Property Name="out_SystemException" Type="OutArgument(System.Exception)" />
+  </x:Members>
+  <ActivityBuilder.Implementation>
+    <Sequence DisplayName="Process and set status">
+      <TryCatch DisplayName="Process guarded">
+        <TryCatch.Try>
+          <Sequence DisplayName="Process item">
+            <Assign To="[invoiceNumber]"
+                    Value="[in_TransactionItem.SpecificContent(&quot;InvoiceNumber&quot;).ToString]" />
+            <Assign To="[transactionReference]"
+                    Value="[in_TransactionItem.Reference]" />
+            <If Condition="[String.IsNullOrWhiteSpace(invoiceNumber)]">
+              <If.Then>
+                <Throw Exception="[New BusinessRuleException(&quot;Missing invoice number&quot;)]" />
+              </If.Then>
+            </If>
+            <Switch x:TypeArguments="x:String" Expression="[transactionStatus]" DisplayName="Route transaction status">
+              <Switch.Cases>
+                <Sequence x:Key="Success" DisplayName="Success status">
+                  <ui:SetTransactionStatus DisplayName="Set success"
+                                           TransactionItem="[in_TransactionItem]"
+                                           Status="[&quot;Successful&quot;]" />
+                </Sequence>
+                <Sequence x:Key="BusinessException" DisplayName="Business exception status">
+                  <ui:SetTransactionStatus DisplayName="Set business exception"
+                                           TransactionItem="[in_TransactionItem]"
+                                           Status="[&quot;Failed&quot;]"
+                                           ErrorType="[&quot;Business&quot;]"
+                                           Reason="[out_BusinessException.Message]" />
+                </Sequence>
+                <Sequence x:Key="ApplicationException" DisplayName="Application exception status">
+                  <Assign To="[io_RetryNumber]" Value="[io_RetryNumber + 1]" />
+                  <If Condition="[io_RetryNumber &lt; CInt(in_Config(&quot;MaxRetryNumber&quot;))]">
+                    <If.Then>
+                      <InvokeWorkflowFile DisplayName="Reset applications"
+                                          WorkflowFileName="CloseAllApplications.xaml" />
+                    </If.Then>
+                    <If.Else>
+                      <ui:SetTransactionStatus DisplayName="Set application exception"
+                                               TransactionItem="[in_TransactionItem]"
+                                               Status="[&quot;Failed&quot;]"
+                                               ErrorType="[&quot;Application&quot;]"
+                                               Reason="[out_SystemException.Message]" />
+                    </If.Else>
+                  </If>
+                </Sequence>
+              </Switch.Cases>
+            </Switch>
+          </Sequence>
+        </TryCatch.Try>
+        <TryCatch.Catches>
+          <Catch TypeArguments="BusinessRuleException">
+            <Catch.Action>
+              <ActivityAction>
+                <DelegateInArgument Name="exception" />
+                <Sequence DisplayName="Business catch">
+                  <Assign To="[out_BusinessException]" Value="[exception]" />
+                  <Rethrow />
+                </Sequence>
+              </ActivityAction>
+            </Catch.Action>
+          </Catch>
+          <Catch TypeArguments="System.Exception">
+            <Catch.Action>
+              <ActivityAction>
+                <DelegateInArgument Name="exception" />
+                <Sequence DisplayName="System catch">
+                  <Assign To="[out_SystemException]" Value="[exception]" />
+                  <Rethrow />
+                </Sequence>
+              </ActivityAction>
+            </Catch.Action>
+          </Catch>
+        </TryCatch.Catches>
+        <TryCatch.Finally>
+          <LogMessage Level="Info" Message="[&quot;Process workflow finished&quot;]" />
+        </TryCatch.Finally>
+      </TryCatch>
+    </Sequence>
+  </ActivityBuilder.Implementation>
+</ActivityBuilder>

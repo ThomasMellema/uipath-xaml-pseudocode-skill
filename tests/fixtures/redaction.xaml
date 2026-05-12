@@ -1,0 +1,13 @@
+<Activity x:Class="Main"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Sequence DisplayName="Main">
+    <TypeInto DisplayName="Enter password"
+              Text="[&quot;hunter2&quot;]"
+              Selector="&lt;webctrl aaname='Acme Corp secret portal' id='password' /&gt;" />
+    <HttpClient DisplayName="Call API"
+                Endpoint="[https://example.invalid?token=abc123456789]" />
+    <TypeInto DisplayName="Use config password"
+              Text="[Config(&quot;Password&quot;).ToString]" />
+  </Sequence>
+</Activity>

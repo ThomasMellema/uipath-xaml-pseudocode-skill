@@ -1,0 +1,125 @@
+<ActivityBuilder xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <x:Members>
+    <x:Property Name="in_Config" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property Name="in_TransactionNumber" Type="InArgument(x:Int32)" />
+    <x:Property Name="out_Status" Type="OutArgument(x:String)" />
+  </x:Members>
+  <TextExpression.NamespacesForImplementation>
+    <x:String>System</x:String>
+    <x:String>System.Linq</x:String>
+  </TextExpression.NamespacesForImplementation>
+  <WorkflowViewStateService.ViewState>
+    <x:String>designer metadata should be skipped</x:String>
+  </WorkflowViewStateService.ViewState>
+  <ActivityBuilder.Implementation>
+    <Sequence DisplayName="Process transaction">
+      <Sequence.Variables>
+        <Variable x:TypeArguments="x:String" Name="queueName" Default="[Config(&quot;QueueName&quot;).ToString]" />
+        <Variable x:TypeArguments="x:String" Name="status" />
+        <Variable x:TypeArguments="x:Int32" Name="retryCounter" Default="[0]" />
+        <Variable x:TypeArguments="x:String" Name="apiToken" Default="[&quot;live-token-1234567890&quot;]" />
+      </Sequence.Variables>
+
+      <Assign DisplayName="Build reference">
+        <Assign.To>
+          <OutArgument x:TypeArguments="x:String">[reference]</OutArgument>
+        </Assign.To>
+        <Assign.Value>
+          <InArgument x:TypeArguments="x:String">[&quot;INV-&quot; + in_TransactionNumber.ToString]</InArgument>
+        </Assign.Value>
+      </Assign>
+
+      <ui:GetAsset DisplayName="Load queue name"
+                   AssetName="[Config(&quot;QueueNameAsset&quot;).ToString]"
+                   Value="[queueName]" />
+
+      <TryCatch DisplayName="Main guarded block">
+        <TryCatch.Try>
+          <Sequence DisplayName="Try transaction">
+            <ui:ExcelApplicationScope DisplayName="Open workbook"
+                                      WorkbookPath="[Config(&quot;WorkbookPath&quot;).ToString]">
+              <ui:ReadRange DisplayName="Read input sheet"
+                            SheetName="Input"
+                            Range="A1:F200" />
+              <ForEachRow DisplayName="Loop rows" Values="[dtInput.Rows]">
+                <ForEachRow.Body>
+                  <ActivityAction>
+                    <DelegateInArgument Name="row" />
+                    <Sequence DisplayName="Process row">
+                      <If Condition="[row(&quot;Amount&quot;).ToString &lt;&gt; String.Empty]">
+                        <If.Then>
+                          <ui:AddQueueItem DisplayName="Queue invoice"
+                                           QueueName="[queueName]"
+                                           TransactionItem="[row]" />
+                        </If.Then>
+                        <If.Else>
+                          <LogMessage Level="Warn"
+                                      Message="[&quot;Skipping empty amount&quot;]" />
+                        </If.Else>
+                      </If>
+                    </Sequence>
+                  </ActivityAction>
+                </ForEachRow.Body>
+              </ForEachRow>
+            </ui:ExcelApplicationScope>
+
+            <RetryScope NumberOfRetries="[CInt(Config(&quot;MaxRetryNumber&quot;))]"
+                        RetryInterval="[TimeSpan.FromSeconds(5)]">
+              <RetryScope.ActivityBody>
+                <ui:OpenBrowser DisplayName="Open portal"
+                                Url="[Config(&quot;PortalUrl&quot;).ToString]" />
+                <ui:TypeInto DisplayName="Enter password"
+                             Text="[&quot;super-secret-password&quot;]"
+                             Selector="&lt;webctrl aaname='Contoso Portal Password' id='password' /&gt;" />
+              </RetryScope.ActivityBody>
+              <RetryScope.Condition>
+                <ui:ElementExists DisplayName="Portal loaded"
+                                  Selector="&lt;webctrl title='Contoso Portal' id='dashboard' /&gt;" />
+              </RetryScope.Condition>
+            </RetryScope>
+
+            <Switch x:TypeArguments="x:String" Expression="[status]" DisplayName="Route status">
+              <Switch.Cases>
+                <Sequence x:Key="Success" DisplayName="Success path">
+                  <InvokeWorkflowFile DisplayName="Notify success"
+                                      WorkflowFileName="NotifySuccess.xaml">
+                    <InvokeWorkflowFile.Arguments>
+                      <InArgument x:Key="in_Reference">[reference]</InArgument>
+                      <OutArgument x:Key="out_Status">[out_Status]</OutArgument>
+                    </InvokeWorkflowFile.Arguments>
+                  </InvokeWorkflowFile>
+                </Sequence>
+                <Sequence x:Key="BusinessException" DisplayName="Business exception path">
+                  <Throw Exception="[New BusinessRuleException(&quot;Invalid invoice&quot;)]" />
+                </Sequence>
+              </Switch.Cases>
+              <Switch.Default>
+                <LogMessage Level="Info" Message="[&quot;Unhandled status: &quot; + status]" />
+              </Switch.Default>
+            </Switch>
+          </Sequence>
+        </TryCatch.Try>
+        <TryCatch.Catches>
+          <Catch TypeArguments="System.Exception">
+            <Sequence DisplayName="Handle system exception">
+              <Assign>
+                <Assign.To>
+                  <OutArgument x:TypeArguments="x:String">[out_Status]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="x:String">[&quot;Failed&quot;]</InArgument>
+                </Assign.Value>
+              </Assign>
+              <LogMessage Level="Error" Message="[exception.Message]" />
+            </Sequence>
+          </Catch>
+        </TryCatch.Catches>
+        <TryCatch.Finally>
+          <LogMessage Level="Info" Message="[&quot;Finished transaction&quot;]" />
+        </TryCatch.Finally>
+      </TryCatch>
+    </Sequence>
+  </ActivityBuilder.Implementation>
+</ActivityBuilder>

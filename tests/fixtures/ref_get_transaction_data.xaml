@@ -1,0 +1,38 @@
+<ActivityBuilder xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <x:Members>
+    <x:Property Name="in_Config" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property Name="io_TransactionNumber" Type="InOutArgument(x:Int32)" />
+    <x:Property Name="out_TransactionItem" Type="OutArgument(UiPath.Core.QueueItem)" />
+    <x:Property Name="out_TransactionID" Type="OutArgument(x:String)" />
+  </x:Members>
+  <ActivityBuilder.Implementation>
+    <Sequence DisplayName="Get transaction data">
+      <ui:GetTransactionItem DisplayName="Get orchestrator transaction"
+                             QueueName="[Config(&quot;OrchestratorQueueName&quot;).ToString]"
+                             TransactionItem="[out_TransactionItem]" />
+      <If Condition="[out_TransactionItem Is Nothing]">
+        <If.Then>
+          <Sequence DisplayName="No queue item">
+            <Assign To="[out_TransactionID]" Value="[Nothing]" />
+          </Sequence>
+        </If.Then>
+        <If.Else>
+          <Sequence DisplayName="Prepare queue item">
+            <Assign To="[out_TransactionID]" Value="[out_TransactionItem.Reference]" />
+            <Assign To="[io_TransactionNumber]" Value="[io_TransactionNumber + 1]" />
+          </Sequence>
+        </If.Else>
+      </If>
+      <If Condition="[Config(&quot;TransactionDataSource&quot;).ToString = &quot;DataTable&quot;]">
+        <If.Then>
+          <Sequence DisplayName="Non queue fallback">
+            <Assign To="[currentRow]" Value="[dt_TransactionData.Rows(io_TransactionNumber - 1)]" />
+            <Assign To="[out_TransactionID]" Value="[currentRow(&quot;Reference&quot;).ToString]" />
+          </Sequence>
+        </If.Then>
+      </If>
+    </Sequence>
+  </ActivityBuilder.Implementation>
+</ActivityBuilder>

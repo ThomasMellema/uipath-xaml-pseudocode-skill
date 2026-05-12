@@ -1,0 +1,15 @@
+<ActivityBuilder xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ActivityBuilder.Implementation>
+    <Sequence DisplayName="Builder Main">
+      <Assign>
+        <Assign.To>
+          <OutArgument x:TypeArguments="x:String">[name]</OutArgument>
+        </Assign.To>
+        <Assign.Value>
+          <InArgument x:TypeArguments="x:String">["Alice"]</InArgument>
+        </Assign.Value>
+      </Assign>
+    </Sequence>
+  </ActivityBuilder.Implementation>
+</ActivityBuilder>

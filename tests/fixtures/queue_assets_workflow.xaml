@@ -1,0 +1,35 @@
+<Activity x:Class="QueueAssetsWorkflow"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <Sequence DisplayName="Queue assets credentials flow">
+    <ui:GetAsset DisplayName="Get queue asset"
+                 AssetName="[Config(&quot;QueueAssetName&quot;).ToString]"
+                 Value="[queueName]" />
+    <ui:GetCredential DisplayName="Get robot credential"
+                      CredentialName="[Config(&quot;CredentialName&quot;).ToString]"
+                      Username="[credentialUser]"
+                      Password="[credentialPassword]" />
+    <ui:GetTransactionItem DisplayName="Get queue transaction"
+                           QueueName="[queueName]"
+                           TransactionItem="[transactionItem]" />
+    <ui:AddQueueItem DisplayName="Add audit item"
+                     QueueName="[Config(&quot;AuditQueue&quot;).ToString]"
+                     TransactionItem="[auditItem]" />
+    <If Condition="[transactionItem Is Nothing]">
+      <If.Then>
+        <LogMessage Level="Info" Message="[&quot;No transaction item&quot;]" />
+      </If.Then>
+      <If.Else>
+        <ui:SetTransactionStatus DisplayName="Set success"
+                                 TransactionItem="[transactionItem]"
+                                 Status="[&quot;Successful&quot;]"
+                                 Reason="[&quot;Done&quot;]"
+                                 QueueName="[queueName]" />
+      </If.Else>
+    </If>
+    <ui:CustomVendorActivity DisplayName="Vendor extension"
+                             Value="[queueName]"
+                             TimeoutMS="10000" />
+  </Sequence>
+</Activity>

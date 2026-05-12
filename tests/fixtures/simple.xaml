@@ -1,0 +1,25 @@
+<Activity x:Class="Main"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Sequence DisplayName="Main">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="invoice" />
+    </Sequence.Variables>
+    <Assign DisplayName="Set invoice">
+      <Assign.To>
+        <OutArgument x:TypeArguments="x:String">[invoice]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">[row(&quot;InvoiceNumber&quot;).ToString.Trim]</InArgument>
+      </Assign.Value>
+    </Assign>
+    <If Condition="[invoice &lt;&gt; String.Empty]" DisplayName="Has invoice">
+      <If.Then>
+        <LogMessage Level="Info" Message="[invoice]" />
+      </If.Then>
+      <If.Else>
+        <Throw Exception="[New BusinessRuleException(&quot;Missing invoice&quot;)]" />
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>

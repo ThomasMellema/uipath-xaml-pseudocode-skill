@@ -1,0 +1,4 @@
+interface:
+  display_name: "UiPath XAML Pseudocode"
+  short_description: "Convert UiPath XAML into compact pseudocode"
+  default_prompt: "Use $uipath-xaml-pseudocode to convert and inspect this UiPath workflow or project before analyzing it."

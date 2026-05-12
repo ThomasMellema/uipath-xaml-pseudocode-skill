@@ -1,0 +1,46 @@
+<Activity x:Class="MailApiFilesWorkflow"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <Sequence DisplayName="Mail API files flow">
+    <ui:GetOutlookMailMessages DisplayName="Read inbox"
+                               Folder="Inbox"
+                               Output="[mailMessages]" />
+    <ForEach DisplayName="Loop mails" Values="[mailMessages]">
+      <ForEach.Body>
+        <ActivityAction>
+          <DelegateInArgument Name="mail" />
+          <Sequence DisplayName="Handle mail">
+            <ui:SaveMailAttachments DisplayName="Save attachments"
+                                    MailMessage="[mail]"
+                                    FolderPath="[Config(&quot;AttachmentFolder&quot;).ToString]" />
+          </Sequence>
+        </ActivityAction>
+      </ForEach.Body>
+    </ForEach>
+    <ui:SendOutlookMailMessage DisplayName="Send result"
+                               To="[Config(&quot;SupportMailbox&quot;).ToString]"
+                               Subject="[&quot;Robot completed&quot;]"
+                               Body="[summaryHtml]" />
+    <ui:HttpClient DisplayName="Call status API"
+                   Method="POST"
+                   Endpoint="[Config(&quot;StatusApiEndpoint&quot;).ToString + &quot;?token=abc123456789&quot;]"
+                   Body="[payloadJson]"
+                   Result="[apiResponse]"
+                   StatusCode="[statusCode]" />
+    <ui:DeserializeJson DisplayName="Parse response"
+                        Input="[apiResponse]"
+                        Output="[jsonResponse]" />
+    <ui:ReadTextFile DisplayName="Read template"
+                     Path="[Config(&quot;TemplatePath&quot;).ToString]"
+                     Output="[templateText]" />
+    <ui:WriteTextFile DisplayName="Write audit file"
+                      Path="[auditPath]"
+                      Text="[auditContent]" />
+    <ui:CopyFile DisplayName="Copy archive"
+                 Source="[auditPath]"
+                 Destination="[archivePath]" />
+    <ui:DeleteFile DisplayName="Delete temp file"
+                   Path="[tempPath]" />
+  </Sequence>
+</Activity>

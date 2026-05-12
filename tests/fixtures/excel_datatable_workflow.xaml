@@ -1,0 +1,42 @@
+<Activity x:Class="ExcelDatatableWorkflow"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities">
+  <Sequence DisplayName="Excel and datatable flow">
+    <ui:UseExcelFile DisplayName="Use workbook"
+                     WorkbookPath="[Config(&quot;WorkbookPath&quot;).ToString]">
+      <ui:UseExcelFile.Body>
+        <Sequence DisplayName="Workbook actions">
+          <ui:ReadRange DisplayName="Read invoices"
+                        SheetName="Input"
+                        Range="A1:F200"
+                        Output="[dtInvoices]" />
+          <ui:FilterDataTable DisplayName="Keep open invoices"
+                              InputDataTable="[dtInvoices]"
+                              OutputDataTable="[dtOpenInvoices]" />
+          <ForEachRow DisplayName="Loop open invoices" Values="[dtOpenInvoices.Rows]">
+            <ForEachRow.Body>
+              <ActivityAction>
+                <DelegateInArgument Name="row" />
+                <Sequence DisplayName="Update row">
+                  <ui:ReadCell DisplayName="Read status"
+                               SheetName="Input"
+                               Cell="[&quot;F&quot; + rowIndex.ToString]"
+                               Output="[status]" />
+                  <ui:WriteCell DisplayName="Write processed"
+                                SheetName="Input"
+                                Cell="[&quot;G&quot; + rowIndex.ToString]"
+                                Value="[&quot;Processed&quot;]" />
+                </Sequence>
+              </ActivityAction>
+            </ForEachRow.Body>
+          </ForEachRow>
+          <ui:WriteRange DisplayName="Write filtered invoices"
+                         SheetName="Output"
+                         Range="A1"
+                         DataTable="[dtOpenInvoices]" />
+        </Sequence>
+      </ui:UseExcelFile.Body>
+    </ui:UseExcelFile>
+  </Sequence>
+</Activity>
